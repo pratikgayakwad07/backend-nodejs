@@ -1,0 +1,40 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ap-south-1
+
+    - name: Login ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build Image
+      run: |
+        docker build -t amazona-backend .
+
+    - name: Push Image
+      run: |
+        docker tag amazona-backend:latest ECR_REPO_URL:latest
+        docker push ECR_REPO_URL:latest
+
+    - name: Force ECS Deploy
+      run: |
+        aws ecs update-service \
+        --cluster amazona-cluster \
+        --service amazona-service \
+        --force-new-deployment
